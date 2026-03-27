@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brewhaven</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #F8F6F3;
+      color: #2C1E16;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .smooth-shadow {
+      box-shadow: 0 10px 40px -10px rgba(139, 115, 85, 0.15);
+    }
+
+    .widget-shadow {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .animate-scale-in { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+    .stagger-3 { animation-delay: 0.3s; }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Button variants */
+    .btn-base { position: relative; overflow: hidden; border-radius: 1rem; font-weight: 500; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-base:active { transform: scale(0.95); }
+    .btn-primary { background: #2C1E16; color: #F8F6F3; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    .btn-primary:hover { background: #4A3324; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+    .btn-secondary { background: white; color: #2C1E16; border: 1px solid #E8E4D9; box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
+    .btn-secondary:hover { background: #F8F6F3; }
+    .btn-ghost { color: #8B7355; }
+    .btn-ghost:hover { color: #2C1E16; background: rgba(232, 228, 217, 0.5); }
+    .btn-accent { background: #D97743; color: white; box-shadow: 0 10px 15px -3px rgba(217, 119, 67, 0.3); }
+    .btn-accent:hover { background: #C26535; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // --- Mock Data ---
+    const MOCK_RECIPES = [
+      { id: 1, name: 'Velvet Espresso', category: 'Espresso', type: 'Hot', time: '5 mins', difficulty: 'Medium', rating: 4.8, reviews: 124, image: 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&q=80&w=400', author: 'BaristaJane', description: 'A perfectly extracted shot with a thick, velvety crema.', tags: ['Strong', 'Classic'] },
+      { id: 2, name: 'Vanilla Cloud Cold Brew', category: 'Cold Brew', type: 'Cold', time: '12 hrs', difficulty: 'Easy', rating: 4.9, reviews: 342, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&q=80&w=400', author: 'CoffeeNinja', description: 'Smooth cold brew topped with sweet vanilla cold foam.', tags: ['Sweet', 'Refreshing'] },
+      { id: 3, name: 'Cardamom Pour Over', category: 'Pour Over', type: 'Hot', time: '8 mins', difficulty: 'Hard', rating: 4.7, reviews: 89, image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=400', author: 'SpiceLover', description: 'Light roast Ethiopian beans brewed with fresh cardamom pods.', tags: ['Spiced', 'Aromatic'] },
+      { id: 4, name: 'Caramel Macchiato', category: 'Milk Based', type: 'Hot', time: '10 mins', difficulty: 'Medium', rating: 4.6, reviews: 210, image: 'https://images.unsplash.com/photo-1485808191679-5f86510681a2?auto=format&fit=crop&q=80&w=400', author: 'SweetTooth', description: 'Steamed milk stained with espresso and drizzled with caramel.', tags: ['Sweet', 'Milky'] },
+    ];
+
+    const REVIEWS = [
+      { id: 1, user: 'Alex M.', recipe: 'Velvet Espresso', text: 'Changed my morning routine entirely. The extraction tips are spot on.', rating: 5, time: '2h ago' },
+      { id: 2, user: 'Sarah K.', recipe: 'Vanilla Cloud', text: 'So refreshing! I make a batch every Sunday for the week.', rating: 5, time: '5h ago' },
+      { id: 3, user: 'David L.', recipe: 'Cardamom Pour Over', text: 'A bit tricky to get the spice ratio right, but worth it.', rating: 4, time: '1d ago' },
+    ];
+
+    // --- State ---
+    let state = {
+      isAuthenticated: false,
+      activeTab: 'explore',
+      selectedRecipe: null,
+      savedRecipes: [],
+      recipes: [...MOCK_RECIPES],
+      searchQuery: '',
+      activeCategory: 'All',
+      addBrewForm: { category: 'Espresso' }
+    };
+
+    // --- Core Render Logic ---
+    function renderApp() {
+      const app = document.getElementById('app');
+      
+      if (!state.isAuthenticated) {
+        app.innerHTML = getLoginHTML();
+      } else if (state.selectedRecipe) {
+        app.innerHTML = getRecipeDetailHTML(state.selectedRecipe);
+      } else {
+        app.innerHTML = getLayoutHTML();
+        renderMainContent();
+      }
+      lucide.createIcons();
+    }
+
+    // --- Component HTML Generators ---
+    function getLoginHTML() {
+      return `
+        <div class="h-screen w-full flex items-center justify-center bg-[#F8F6F3] relative overflow-hidden p-6">
+          <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-[#E8E4D9] blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+          <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-[#F5D8C6] blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+          
+          <div class="w-full max-w-md bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] smooth-shadow border border-white opacity-0 animate-scale-in relative z-10">
+            <div class="flex justify-center mb-8">
+              <div class="w-20 h-20 bg-[#2C1E16] rounded-[1.5rem] flex items-center justify-center rotate-3 smooth-shadow">
+                <i data-lucide="coffee" class="text-[#F8F6F3] -rotate-3 w-10 h-10"></i>
+              </div>
+            </div>
+            
+            <h1 class="text-3xl font-bold text-center text-[#2C1E16] mb-2">Brewhaven</h1>
+            <p class="text-center text-[#8B7355] mb-8">Your aesthetic Wikipedia for coffee.</p>
+            
+            <div class="space-y-4">
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-[#8B7355] ml-2">Email</label>
+                <input type="email" placeholder="barista@brewhaven.com" class="w-full px-5 py-4 rounded-2xl bg-[#F8F6F3] border-none focus:ring-2 focus:ring-[#D97743] outline-none transition-all placeholder:text-[#C4B7A6]" />
+              </div>
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-[#8B7355] ml-2">Password</label>
+                <input type="password" placeholder="••••••••" class="w-full px-5 py-4 rounded-2xl bg-[#F8F6F3] border-none focus:ring-2 focus:ring-[#D97743] outline-none transition-all placeholder:text-[#C4B7A6]" />
+              </div>
+              
+              <button onclick="login()" class="btn-base btn-primary w-full py-4 mt-6 text-lg">
+                Brew In <i data-lucide="chevron-right" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getLayoutHTML() {
+      return `
+        <div class="flex h-screen w-full bg-[#F8F6F3] overflow-hidden relative">
+          <!-- Floating Desktop Nav -->
+          <div class="hidden md:block fixed top-8 right-8 z-50 group">
+            <div class="bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-4 flex items-center gap-3 cursor-pointer border border-[#E8E4D9] hover:bg-white transition-colors">
+              <div class="bg-[#2C1E16] text-white p-1.5 rounded-lg">
+                <i data-lucide="coffee" class="w-[18px] h-[18px]"></i>
+              </div>
+              <span class="font-bold text-[#2C1E16]">Menu</span>
+            </div>
+            
+            <div class="absolute top-full right-0 mt-4 w-64 glass-panel bg-white/95 rounded-[2rem] p-4 shadow-2xl opacity-0 invisible -translate-y-4 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300 border border-[#E8E4D9]">
+              <nav class="space-y-1">
+                ${getNavItemHTML('home', 'Explore', 'explore')}
+                ${getNavItemHTML('plus', 'Add Brew', 'add')}
+                ${getNavItemHTML('star', 'Reviews', 'reviews')}
+                ${getNavItemHTML('bookmark', 'Saved', 'saved')}
+              </nav>
+
+              <div class="mt-4 pt-4 border-t border-[#E8E4D9]">
+                <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F8F6F3] transition-colors cursor-pointer" onclick="logout()">
+                  <div class="w-8 h-8 rounded-full bg-[#D97743] flex items-center justify-center text-white font-bold text-xs">JD</div>
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-[#2C1E16]">John Doe</p>
+                  </div>
+                  <i data-lucide="log-out" class="w-4 h-4 text-[#8B7355]"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content Area -->
+          <main class="flex-1 h-full overflow-y-auto hide-scrollbar relative z-10 w-full pb-24 md:pb-0">
+            <!-- Desktop Header -->
+            <div class="hidden md:flex items-center gap-3 p-8 pb-0 animate-fade-up">
+              <div class="bg-[#2C1E16] text-white p-2 rounded-xl shadow-lg">
+                <i data-lucide="coffee" class="w-6 h-6"></i>
+              </div>
+              <h1 class="text-2xl font-bold tracking-tight text-[#2C1E16]">Brewhaven</h1>
+            </div>
+
+            <!-- Mobile Header -->
+            <header class="md:hidden flex items-center justify-between p-6 glass-panel sticky top-0 z-30">
+              <div class="flex items-center gap-2">
+                <div class="bg-[#2C1E16] text-white p-1.5 rounded-lg">
+                  <i data-lucide="coffee" class="w-5 h-5"></i>
+                </div>
+                <h1 class="text-xl font-bold text-[#2C1E16]">Brewhaven</h1>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-[#D97743] text-white flex items-center justify-center text-sm font-bold">
+                JD
+              </div>
+            </header>
+
+            <div id="main-content" class="p-6 md:p-10 max-w-6xl mx-auto opacity-0 animate-fade-up">
+              <!-- Content injected here -->
+            </div>
+          </main>
+
+          <!-- Mobile Bottom Nav -->
+          <nav class="md:hidden fixed bottom-6 left-6 right-6 glass-panel rounded-3xl p-2 flex justify-around items-center z-40 smooth-shadow">
+            ${getMobileNavItemHTML('home', 'explore')}
+            ${getMobileNavItemHTML('plus', 'add', true)}
+            ${getMobileNavItemHTML('star', 'reviews')}
+          </nav>
+        </div>
+      `;
+    }
+
+    function renderMainContent() {
+      const container = document.getElementById('main-content');
+      if (state.activeTab === 'explore' || state.activeTab === 'saved') {
+        container.innerHTML = getExploreHTML(state.activeTab === 'saved');
+      } else if (state.activeTab === 'add') {
+        container.innerHTML = getAddBrewHTML();
+      } else if (state.activeTab === 'reviews') {
+        container.innerHTML = getReviewsHTML();
+      }
+      lucide.createIcons();
+    }
+
+    function getExploreHTML(isSavedView) {
+      return `
+        <div class="space-y-8 pb-12">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-3xl font-bold text-[#2C1E16]">${isSavedView ? 'Saved Brews' : 'Find your brew.'}</h2>
+              <p class="text-[#8B7355] mt-1">${isSavedView ? 'Your curated coffee collection.' : 'Discover recipes from the community.'}</p>
+            </div>
+            
+            <div class="relative w-full md:w-80 group">
+              <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] transition-colors group-focus-within:text-[#D97743] w-5 h-5"></i>
+              <input 
+                type="text" 
+                value="${state.searchQuery}"
+                oninput="handleSearch(this.value)"
+                placeholder="Search recipes, beans..." 
+                class="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-[#E8E4D9] focus:border-[#D97743] focus:ring-4 focus:ring-[#D97743]/10 outline-none transition-all widget-shadow"
+              />
+              <button class="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[#F8F6F3] rounded-xl hover:bg-[#E8E4D9] transition-colors">
+                <i data-lucide="sliders-horizontal" class="text-[#2C1E16] w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          ${!isSavedView ? `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-0 animate-fade-up stagger-1">
+              ${getWidgetHTML('flame', 'Trending', 'Cold Brew', 'bg-orange-100 text-orange-600')}
+              ${getWidgetHTML('star', 'Top Rated', 'Espresso', 'bg-yellow-100 text-yellow-600')}
+              ${getWidgetHTML('droplets', 'Newest', 'Pour Over', 'bg-blue-100 text-blue-600')}
+              ${getWidgetHTML('user', 'My Stats', '12 Brews', 'bg-green-100 text-green-600')}
+            </div>
+          ` : ''}
+
+          <div id="explore-dynamic-content">
+            ${getExploreDynamicHTML(isSavedView)}
+          </div>
+        </div>
+      `;
+    }
+
+    function getExploreDynamicHTML(isSavedView) {
+      const sourceRecipes = isSavedView ? state.savedRecipes : state.recipes;
+      const filteredRecipes = sourceRecipes.filter(r => {
+        const matchesSearch = r.name.toLowerCase().includes(state.searchQuery.toLowerCase()) || 
+                              r.category.toLowerCase().includes(state.searchQuery.toLowerCase());
+        const matchesCategory = state.activeCategory === 'All' || r.category === state.activeCategory;
+        return matchesSearch && matchesCategory;
+      });
+
+      let html = '';
+
+      if (!isSavedView && filteredRecipes.length > 0) {
+        const featured = filteredRecipes[0];
+        html += `
+          <div class="relative w-full h-64 md:h-80 rounded-[2rem] overflow-hidden cursor-pointer group opacity-0 animate-fade-up stagger-2 smooth-shadow mb-8" onclick="selectRecipe(${featured.id})">
+            <img src="${featured.image}" alt="Featured" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+            <div class="absolute bottom-0 left-0 p-6 md:p-8 w-full">
+              <div class="flex gap-2 mb-3">
+                <span class="px-3 py-1 bg-[#D97743] text-white text-xs font-bold rounded-full uppercase tracking-wider backdrop-blur-md">Featured</span>
+                <span class="px-3 py-1 bg-white/20 text-white text-xs font-bold rounded-full uppercase tracking-wider backdrop-blur-md">${featured.difficulty}</span>
+              </div>
+              <h3 class="text-3xl md:text-4xl font-bold text-white mb-2">${featured.name}</h3>
+              <p class="text-white/80 line-clamp-1 max-w-lg">${featured.description}</p>
+            </div>
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="mb-6">
+          <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2 opacity-0 animate-fade-up stagger-3">
+            ${['All', 'Espresso', 'Pour Over', 'Cold Brew', 'Milk Based', 'Syrups'].map(cat => `
+              <button onclick="setCategory('${cat}')" class="whitespace-nowrap px-6 py-3 rounded-2xl font-medium transition-all ${state.activeCategory === cat ? 'bg-[#2C1E16] text-white' : 'bg-white text-[#8B7355] border border-[#E8E4D9] hover:border-[#2C1E16]'}">
+                ${cat}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      if (filteredRecipes.length === 0) {
+        html += `<div class="text-center py-12 text-[#8B7355]">No recipes found.</div>`;
+      } else {
+        const gridRecipes = (isSavedView || filteredRecipes.length === 1 || state.searchQuery) ? filteredRecipes : filteredRecipes.slice(1);
+        html += `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-0 animate-fade-up stagger-3">
+            ${gridRecipes.map(recipe => {
+              const isSaved = state.savedRecipes.some(r => r.id === recipe.id);
+              return `
+              <div class="bg-white rounded-[2rem] p-4 widget-shadow hover:shadow-xl transition-all duration-300 cursor-pointer group border border-transparent hover:border-[#E8E4D9]" onclick="selectRecipe(${recipe.id})">
+                <div class="relative h-48 rounded-2xl overflow-hidden mb-4">
+                  <img src="${recipe.image}" alt="${recipe.name}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <button onclick="toggleSave(event, ${recipe.id})" class="absolute top-3 right-3 p-2 backdrop-blur-md rounded-full transition-colors ${isSaved ? 'bg-white text-[#D97743]' : 'bg-white/30 text-white hover:bg-white hover:text-[#D97743]'}">
+                    <i data-lucide="heart" class="w-[18px] h-[18px] ${isSaved ? 'fill-current' : ''}"></i>
+                  </button>
+                </div>
+                <div class="px-2">
+                  <div class="flex justify-between items-start mb-2">
+                    <h4 class="text-xl font-bold text-[#2C1E16]">${recipe.name}</h4>
+                    <div class="flex items-center gap-1 text-[#D97743] bg-orange-50 px-2 py-1 rounded-lg">
+                      <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                      <span class="text-sm font-bold">${recipe.rating}</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-[#8B7355] mb-4">
+                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${recipe.time}</span>
+                    <span class="flex items-center gap-1"><i data-lucide="droplets" class="w-3.5 h-3.5"></i> ${recipe.type}</span>
+                  </div>
+                </div>
+              </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function getAddBrewHTML() {
+      const c = state.addBrewForm.category;
+      return `
+        <div class="max-w-3xl mx-auto space-y-8 opacity-0 animate-fade-up">
+          <div>
+            <h2 class="text-3xl font-bold text-[#2C1E16]">Share your recipe</h2>
+            <p class="text-[#8B7355] mt-1">Add to the Brewhaven encyclopedia.</p>
+          </div>
+
+          <div class="bg-white rounded-[2rem] p-6 md:p-8 widget-shadow border border-[#E8E4D9]">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="space-y-6">
+                <div class="space-y-2">
+                  <label class="text-sm font-bold text-[#2C1E16]">Recipe Name</label>
+                  <input id="add-name" type="text" placeholder="e.g., Sunday Morning Pour Over" class="w-full p-4 rounded-2xl bg-[#F8F6F3] border border-transparent focus:border-[#D97743] focus:bg-white outline-none transition-all" />
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-sm font-bold text-[#2C1E16]">Brew Method</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    ${['Espresso', 'V60', 'French', 'Aero', 'Cold', 'Other'].map(method => `
+                      <button onclick="setAddCategory('${method}')" class="py-3 rounded-xl text-sm font-medium transition-all ${c === method ? 'bg-[#2C1E16] text-white' : 'bg-[#F8F6F3] text-[#8B7355] hover:bg-[#E8E4D9]'}">
+                        ${method}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <div class="flex gap-4">
+                  <div class="space-y-2 flex-1">
+                    <label class="text-sm font-bold text-[#2C1E16]">Time</label>
+                    <input id="add-time" type="text" placeholder="e.g., 5 mins" class="w-full p-4 rounded-2xl bg-[#F8F6F3] border border-transparent focus:border-[#D97743] focus:bg-white outline-none transition-all" />
+                  </div>
+                  <div class="space-y-2 flex-1">
+                    <label class="text-sm font-bold text-[#2C1E16]">Yield</label>
+                    <input id="add-yield" type="text" placeholder="e.g., 250ml" class="w-full p-4 rounded-2xl bg-[#F8F6F3] border border-transparent focus:border-[#D97743] focus:bg-white outline-none transition-all" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-6">
+                <div class="space-y-2 h-full flex flex-col">
+                  <label class="text-sm font-bold text-[#2C1E16]">Instructions</label>
+                  <textarea id="add-instructions" placeholder="Step 1: Grind 15g of coffee medium-fine..." class="w-full flex-1 min-h-[150px] p-4 rounded-2xl bg-[#F8F6F3] border border-transparent focus:border-[#D97743] focus:bg-white outline-none transition-all resize-none"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-[#E8E4D9] flex justify-end gap-4">
+              <button onclick="navigate('explore')" class="btn-base btn-ghost px-6 py-3">Cancel</button>
+              <button onclick="publishBrew()" class="btn-base btn-accent px-8 py-3">Publish Brew <i data-lucide="check-circle-2" class="w-[18px] h-[18px]"></i></button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getReviewsHTML() {
+      return `
+        <div class="max-w-4xl mx-auto space-y-8 opacity-0 animate-fade-up">
+           <div>
+            <h2 class="text-3xl font-bold text-[#2C1E16]">Community Activity</h2>
+            <p class="text-[#8B7355] mt-1">See what others are brewing and reviewing.</p>
+          </div>
+          <div class="space-y-4">
+            ${REVIEWS.map((review, i) => `
+              <div class="bg-white p-6 rounded-[2rem] widget-shadow flex flex-col md:flex-row gap-6 items-start animate-fade-up" style="animation-delay: ${i * 0.1}s">
+                <div class="flex-shrink-0 w-12 h-12 bg-[#F8F6F3] rounded-full flex items-center justify-center text-[#2C1E16] font-bold text-lg">
+                  ${review.user.charAt(0)}
+                </div>
+                <div class="flex-1 w-full">
+                  <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div>
+                      <h4 class="font-bold text-[#2C1E16] text-lg">${review.user}</h4>
+                      <p class="text-sm text-[#8B7355]">Reviewed <span class="font-semibold text-[#D97743] cursor-pointer hover:underline">${review.recipe}</span></p>
+                    </div>
+                    <div class="flex gap-1">
+                      ${[...Array(5)].map((_, idx) => `
+                        <i data-lucide="star" class="w-4 h-4 ${idx < review.rating ? "text-[#D97743] fill-current" : "text-[#E8E4D9]"}"></i>
+                      `).join('')}
+                    </div>
+                  </div>
+                  <p class="text-[#2C1E16] leading-relaxed bg-[#F8F6F3] p-4 rounded-2xl mt-3">"${review.text}"</p>
+                  <div class="mt-4 flex gap-4 text-sm text-[#8B7355]">
+                    <button class="flex items-center gap-1 hover:text-[#D97743] transition-colors"><i data-lucide="heart" class="w-4 h-4"></i> Helpful</button>
+                    <button class="flex items-center gap-1 hover:text-[#2C1E16] transition-colors"><i data-lucide="message-square" class="w-4 h-4"></i> Reply</button>
+                    <span class="ml-auto">${review.time}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function getRecipeDetailHTML(recipe) {
+      return `
+        <div class="h-full w-full bg-white overflow-y-auto hide-scrollbar animate-fade-up relative z-20">
+          <div class="relative h-[40vh] md:h-[50vh] w-full">
+            <img src="${recipe.image}" alt="${recipe.name}" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            
+            <button onclick="closeRecipe()" class="absolute top-6 left-6 md:top-10 md:left-10 p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-[#2C1E16] transition-all z-10">
+              <i data-lucide="arrow-left" class="w-6 h-6"></i>
+            </button>
+
+            <div class="absolute bottom-0 left-0 w-full p-6 md:p-12 text-white">
+              <div class="flex flex-wrap gap-2 mb-4">
+                ${recipe.tags.map(tag => `<span class="px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-sm font-medium">${tag}</span>`).join('')}
+              </div>
+              <h1 class="text-4xl md:text-6xl font-bold mb-4">${recipe.name}</h1>
+              <div class="flex items-center gap-6 text-white/90">
+                <span class="flex items-center gap-2"><i data-lucide="star" class="text-[#D97743] fill-current w-5 h-5"></i> ${recipe.rating} (${recipe.reviews} revs)</span>
+                <span class="flex items-center gap-2"><i data-lucide="user" class="w-5 h-5"></i> ${recipe.author}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="max-w-4xl mx-auto p-6 md:p-12 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div class="md:col-span-2 space-y-8">
+              <section>
+                <h3 class="text-2xl font-bold text-[#2C1E16] mb-4">About this brew</h3>
+                <p class="text-lg text-[#8B7355] leading-relaxed">${recipe.description}</p>
+              </section>
+
+              <section>
+                <h3 class="text-2xl font-bold text-[#2C1E16] mb-6">Instructions</h3>
+                <div class="space-y-6">
+                  ${[
+                    "Prepare your equipment. Rinse paper filter with hot water.",
+                    "Grind coffee beans to a medium-fine consistency.",
+                    "Add coffee grounds to the filter. Shake gently to level.",
+                    "Pour 50g of water for the bloom. Wait 30 seconds.",
+                    "Slowly pour remaining water in concentric circles."
+                  ].map((step, idx) => `
+                    <div class="flex gap-4 items-start group">
+                      <div class="w-8 h-8 rounded-full bg-[#F8F6F3] text-[#2C1E16] font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-[#D97743] group-hover:text-white transition-colors">
+                        ${idx + 1}
+                      </div>
+                      <p class="text-[#2C1E16] pt-1">${step}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </section>
+            </div>
+
+            <div class="space-y-6">
+              <div class="bg-[#F8F6F3] p-6 rounded-[2rem]">
+                <h3 class="font-bold text-[#2C1E16] mb-6 text-xl">Quick Facts</h3>
+                <div class="space-y-4">
+                  ${getFactRowHTML('clock', 'Time', recipe.time)}
+                  ${getFactRowHTML('flame', 'Difficulty', recipe.difficulty)}
+                  ${getFactRowHTML('droplets', 'Yield', '1 Cup (250ml)')}
+                  ${getFactRowHTML('coffee', 'Bean', 'Light Roast')}
+                </div>
+              </div>
+              <button class="btn-base btn-primary w-full py-4 text-lg">Save Recipe</button>
+              <button class="btn-base btn-secondary w-full py-4 text-lg"><i data-lucide="share-2" class="w-[18px] h-[18px]"></i> Share</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- Helpers ---
+    function getNavItemHTML(icon, label, tabName) {
+      const active = state.activeTab === tabName;
+      return `
+        <div onclick="navigate('${tabName}')" class="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-300 ${active ? 'bg-[#2C1E16] text-white shadow-lg shadow-[#2C1E16]/20' : 'text-[#8B7355] hover:bg-white hover:text-[#2C1E16]'}">
+          <i data-lucide="${icon}" class="w-5 h-5"></i>
+          <span class="font-medium">${label}</span>
+        </div>
+      `;
+    }
+
+    function getMobileNavItemHTML(icon, tabName, special = false) {
+      const active = state.activeTab === tabName;
+      if (special) {
+        return `
+          <div onclick="navigate('${tabName}')" class="w-14 h-14 bg-[#D97743] text-white rounded-full flex items-center justify-center -translate-y-4 shadow-lg shadow-[#D97743]/40 cursor-pointer active:scale-95 transition-transform">
+            <i data-lucide="${icon}" class="w-6 h-6"></i>
+          </div>
+        `;
+      }
+      return `
+        <div onclick="navigate('${tabName}')" class="p-3 rounded-2xl transition-colors cursor-pointer ${active ? 'text-[#D97743]' : 'text-[#8B7355]'}">
+          <i data-lucide="${icon}" class="w-6 h-6 ${active ? 'fill-current' : ''}"></i>
+        </div>
+      `;
+    }
+
+    function getWidgetHTML(icon, title, value, color) {
+      return `
+        <div class="bg-white p-4 rounded-2xl widget-shadow flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center ${color}">
+            <i data-lucide="${icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-[#8B7355] uppercase tracking-wider">${title}</p>
+            <p class="text-lg font-bold text-[#2C1E16]">${value}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function getFactRowHTML(icon, label, value) {
+      return `
+        <div class="flex items-center justify-between pb-4 border-b border-[#E8E4D9] last:border-0 last:pb-0">
+          <div class="flex items-center gap-2 text-[#8B7355]">
+            <i data-lucide="${icon}" class="w-[18px] h-[18px]"></i>
+            <span class="text-sm">${label}</span>
+          </div>
+          <span class="font-semibold text-[#2C1E16]">${value}</span>
+        </div>
+      `;
+    }
+
+    // --- Actions ---
+    function login() {
+      state.isAuthenticated = true;
+      renderApp();
+    }
+
+    function logout() {
+      state.isAuthenticated = false;
+      renderApp();
+    }
+
+    function navigate(tab) {
+      state.activeTab = tab;
+      state.searchQuery = '';
+      state.activeCategory = 'All';
+      renderApp();
+    }
+
+    function handleSearch(val) {
+      state.searchQuery = val;
+      document.getElementById('explore-dynamic-content').innerHTML = getExploreDynamicHTML(state.activeTab === 'saved');
+      lucide.createIcons();
+    }
+
+    function setCategory(cat) {
+      state.activeCategory = cat;
+      document.getElementById('explore-dynamic-content').innerHTML = getExploreDynamicHTML(state.activeTab === 'saved');
+      lucide.createIcons();
+    }
+
+    function setAddCategory(cat) {
+      state.addBrewForm.category = cat;
+      renderMainContent(); // re-render just the form section
+    }
+
+    function selectRecipe(id) {
+      state.selectedRecipe = state.recipes.find(r => r.id === id);
+      renderApp();
+    }
+
+    function closeRecipe() {
+      state.selectedRecipe = null;
+      renderApp();
+    }
+
+    function toggleSave(e, id) {
+      e.stopPropagation();
+      const recipe = state.recipes.find(r => r.id === id);
+      const isSaved = state.savedRecipes.some(r => r.id === id);
+      
+      if (isSaved) {
+        state.savedRecipes = state.savedRecipes.filter(r => r.id !== id);
+      } else {
+        state.savedRecipes.push(recipe);
+      }
+      document.getElementById('explore-dynamic-content').innerHTML = getExploreDynamicHTML(state.activeTab === 'saved');
+      lucide.createIcons();
+    }
+
+    function publishBrew() {
+      const name = document.getElementById('add-name').value;
+      if (!name) return;
+      
+      const newRecipe = {
+        id: Date.now(),
+        name: name,
+        category: state.addBrewForm.category,
+        type: 'Hot',
+        time: document.getElementById('add-time').value || '5 mins',
+        difficulty: 'Medium',
+        rating: 0,
+        reviews: 0,
+        image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=400',
+        author: 'You',
+        description: document.getElementById('add-instructions').value || 'A delicious new brew added by you.',
+        tags: ['New']
+      };
+      
+      state.recipes.unshift(newRecipe);
+      navigate('explore');
+    }
+
+    // Init
+    renderApp();
+  </script>
+</body>
+</html>
